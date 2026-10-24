@@ -1,0 +1,37 @@
+# Fast checks on every merge request; later weeks add database, evaluate, build and deploy.
+# CI_IMAGE is a project variable pointing at the internal CI image (Python + uv preinstalled).
+default:
+  image: ${CI_IMAGE}
+
+variables:
+  UV_CACHE_DIR: .uv-cache
+
+cache:
+  key:
+    files: [uv.lock]
+  paths: [.uv-cache]
+
+stages: [lint, typecheck, test]
+
+before_script:
+  - uv sync --frozen
+
+lint:
+  stage: lint
+  script:
+    - uv run ruff check .
+    - uv run ruff format --check .
+
+typecheck:
+  stage: typecheck
+  script:
+    - uv run basedpyright
+
+test:
+  stage: test
+  script:
+    - uv run pytest --cov=shared --cov=api --cov-report=term --junitxml=report.xml
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml

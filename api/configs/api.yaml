@@ -1,0 +1,4 @@
+# API settings. Secrets never go here: they come from environment variables.
+upload_dir: data/uploads
+max_upload_mb: 200
+detectors_config: worker/configs/detectors.yaml
