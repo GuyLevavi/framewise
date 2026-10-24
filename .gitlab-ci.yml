@@ -14,7 +14,7 @@ cache:
     files: [uv.lock]
   paths: [.uv-cache]
 
-stages: [lint, typecheck, test, evaluate, build]
+stages: [lint, typecheck, test, evaluate, build, deploy]
 
 before_script:
   - uv sync --frozen
@@ -66,3 +66,16 @@ build:
     - buildah login -u "$QUAY_ROBOT_USER" -p "$QUAY_ROBOT_TOKEN" "${QUAY_IMAGE%%/*}"
     - buildah bud --build-arg BASE_IMAGE="$BASE_IMAGE" -t "$QUAY_IMAGE:$CI_COMMIT_SHORT_SHA" .
     - buildah push "$QUAY_IMAGE:$CI_COMMIT_SHORT_SHA"
+
+deploy:
+  stage: deploy
+  needs: [build]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  before_script: []
+  script:
+    # Argo CD watches deploy/chart with values-nonprod.yaml; changing the tag in Git is the release.
+    - python3 scripts/bump_image_tag.py deploy/chart/values-nonprod.yaml "$CI_COMMIT_SHORT_SHA"
+    - git config user.email "ci@framewise.invalid" && git config user.name "Framewise CI"
+    - git commit -am "Deploy $CI_COMMIT_SHORT_SHA to nonprod [skip ci]"
+    - git push "https://ci:${DEPLOY_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" HEAD:$CI_DEFAULT_BRANCH

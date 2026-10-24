@@ -1,0 +1,19 @@
+# The one object devops creates in the nonprod Argo CD (or adds to their app-of-apps / ApplicationSet).
+# Argo CD then keeps the trainee's namespace equal to deploy/chart + values-nonprod.yaml in Git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: framewise-nonprod
+  namespace: openshift-gitops          # where the nonprod Argo CD runs; ask devops
+spec:
+  project: default                     # devops may use a project limited to this namespace
+  source:
+    repoURL: https://gitlab.example.internal/trainee/framewise.git
+    targetRevision: main
+    path: deploy/chart
+    helm:
+      valueFiles: [values-nonprod.yaml]
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: framewise-nonprod
+  syncPolicy: {}                       # manual sync first; later: {automated: {prune: true, selfHeal: true}}
