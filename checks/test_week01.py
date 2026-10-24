@@ -52,3 +52,4 @@ def test_missing_file_gives_clear_error(tmp_path: Path) -> None:
     result = run_cli("probe", str(tmp_path / "nope.mp4"))
     assert result.returncode != 0
     assert "Traceback" not in result.stderr
+    assert "nope.mp4" in result.stderr, "say which file is missing"

@@ -46,3 +46,4 @@ def test_bad_config_fails_cleanly(tmp_path: Path) -> None:
     result = run_cli("analyze", str(synth.write_still(tmp_path / "s.avi")), "--config", str(config))
     assert result.returncode != 0
     assert "Traceback" not in result.stderr
+    assert "threshold" in result.stderr, "name the setting that is wrong"

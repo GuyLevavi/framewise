@@ -166,7 +166,11 @@ def api_url(app_env: dict[str, str], tmp_path: Path, worker_count: int) -> Itera
         ]
     url = f"http://127.0.0.1:{port}"
     try:
-        wait_healthy(url, procs[0])
+        try:
+            wait_healthy(url, procs[0])
+        except (RuntimeError, TimeoutError) as exc:
+            tail = "\n".join((tmp_path / "api.log").read_text().splitlines()[-15:])
+            raise RuntimeError(f"{exc}\n--- last lines of the API log ---\n{tail}") from None
         yield url
     finally:
         for proc in procs:
