@@ -1,0 +1,6 @@
+# Evaluation gate settings. CI fails the pipeline if any class falls below its threshold.
+detectors_config: worker/configs/detectors.yaml
+detector: people-cars-local
+labels_dir: eval/data          # Label Studio exports + videos; the team helper library replaces this
+thresholds:
+  person: {precision: 0.9, recall: 0.9}

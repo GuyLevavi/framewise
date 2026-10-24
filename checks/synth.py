@@ -6,6 +6,7 @@ Motion therefore happens exactly on frames MOTION_START..MOTION_END.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import cv2
@@ -62,4 +63,29 @@ def write_image_clip(path: Path, image_path: Path, start: int = 10, end: int = 2
     for i in range(FRAMES):
         writer.write(image if start <= i <= end else black)
     writer.release()
+    return path
+
+
+def write_label_studio_export(path: Path, video: Path, label: str, start: int, end: int) -> Path:
+    """A Label Studio export with one TimelineLabels range. Label Studio frames start at 1, so
+    0-based frames start..end become start + 1..end + 1."""
+    task = {
+        "data": {"video": f"/data/upload/1/{video.name}"},
+        "annotations": [
+            {
+                "result": [
+                    {
+                        "from_name": "videoLabels",
+                        "to_name": "video",
+                        "type": "timelinelabels",
+                        "value": {
+                            "ranges": [{"start": start + 1, "end": end + 1}],
+                            "timelinelabels": [label],
+                        },
+                    }
+                ]
+            }
+        ],
+    }
+    path.write_text(json.dumps([task]))
     return path

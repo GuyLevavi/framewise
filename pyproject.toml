@@ -48,7 +48,7 @@ target-version = "py312"
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PTH", "N"]
 
 [tool.basedpyright]
-include = ["shared", "api", "worker", "migrations", "scripts", "tests", "checks"]
+include = ["shared", "api", "worker", "migrations", "scripts", "eval", "tests", "checks"]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
 reportMissingTypeStubs = false
@@ -60,8 +60,9 @@ reportPrivateUsage = "error"
 reportUnnecessaryIsInstance = "error"
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "checks"]
-addopts = "-ra"
+testpaths = ["tests", "checks", "eval"]
+addopts = "-ra -m 'not eval'"
+markers = ["eval: the evaluation gate on labeled clips (run with: pytest -m eval)"]
 pythonpath = ["."]
 filterwarnings = [
     # starlette asks for httpx2; the TestClient still works with httpx

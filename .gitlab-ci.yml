@@ -13,7 +13,7 @@ cache:
     files: [uv.lock]
   paths: [.uv-cache]
 
-stages: [lint, typecheck, test]
+stages: [lint, typecheck, test, evaluate]
 
 before_script:
   - uv sync --frozen
@@ -42,3 +42,14 @@ test:
     when: always
     reports:
       junit: report.xml
+
+evaluate:
+  stage: evaluate
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  cache:
+    - key: eval-clips            # downloaded clips are reused between runs
+      paths: [eval/data]
+  script:
+    # The team helper library fills eval/data from DagsHub and Label Studio; see eval/test_gate.py.
+    - uv run pytest -m eval -s
