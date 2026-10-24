@@ -60,3 +60,26 @@ def test_validation_error_is_422(client: TestClient) -> None:
 
 def test_unknown_video_is_404(client: TestClient) -> None:
     assert client.post("/jobs", json={"video_id": "nope"}).status_code == 404
+
+
+def test_api_key_required_when_configured(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FRAMEWISE_API_KEY", "s3cret")
+    assert client.get("/health").status_code == 200  # probes stay open
+    assert client.get("/jobs/x").status_code == 401
+    assert client.get("/jobs/x", headers={"X-API-Key": "wrong"}).status_code == 401
+    assert client.get("/jobs/x", headers={"X-API-Key": "s3cret"}).status_code == 404
+
+
+def test_wrong_file_type_is_415(client: TestClient) -> None:
+    r = client.post("/videos", files={"file": ("notes.txt", b"hello")})
+    assert r.status_code == 415
+
+
+def test_oversized_upload_is_413_and_leaves_nothing_behind(tmp_path: Path) -> None:
+    settings = ApiSettings(upload_dir=tmp_path / "up", detectors_config=DETECTORS, max_upload_mb=1)
+    with TestClient(create_app(settings, InMemoryJobRepository())) as c:
+        r = c.post("/videos", files={"file": ("big.mp4", b"x" * (1024 * 1024 + 1))})
+    assert r.status_code == 413
+    assert list((tmp_path / "up").iterdir()) == []

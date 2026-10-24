@@ -9,6 +9,7 @@ worker:
   replicas: 2
   resources: {requests: {cpu: 500m, memory: 1Gi}, limits: {cpu: "2", memory: 2Gi}}
 databaseSecret: framewise-db          # Secret with key DATABASE_URL, created outside Git
+apiKeySecret: framewise-api-key       # Secret with key FRAMEWISE_API_KEY, created outside Git
 storage:
   size: 20Gi
   storageClassName: ""                # must support ReadWriteMany: API and worker share files

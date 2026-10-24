@@ -11,6 +11,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 - name: DATABASE_URL
   valueFrom:
     secretKeyRef: {name: {{ .Values.databaseSecret }}, key: DATABASE_URL}
+- name: FRAMEWISE_API_KEY
+  valueFrom:
+    secretKeyRef: {name: {{ .Values.apiKeySecret }}, key: FRAMEWISE_API_KEY}
 - {name: FRAMEWISE_API_CONFIG, value: /app/configs/api.yaml}
 - {name: FRAMEWISE_WORKER_CONFIG, value: /app/configs/worker.yaml}
 {{- end -}}

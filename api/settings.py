@@ -19,6 +19,7 @@ class ApiSettings(BaseModel):
     upload_dir: Path
     max_upload_mb: int = Field(default=200, gt=0)
     detectors_config: Path
+    allowed_extensions: list[str] = [".mp4", ".avi", ".mov", ".mkv"]
 
 
 def load_settings() -> ApiSettings:

@@ -173,10 +173,13 @@ def api_url(app_env: dict[str, str], tmp_path: Path, worker_count: int) -> Itera
             stop(proc)
 
 
-def poll_job(url: str, job_id: str, timeout_s: float = 60) -> dict[str, object]:
+def poll_job(
+    url: str, job_id: str, timeout_s: float = 60, headers: dict[str, str] | None = None
+) -> dict[str, object]:
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
-        body: dict[str, object] = httpx.get(f"{url}/jobs/{job_id}", timeout=5).json()
+        r = httpx.get(f"{url}/jobs/{job_id}", timeout=5, headers=headers)
+        body: dict[str, object] = r.json()
         if body["status"] in ("DONE", "FAILED"):
             return body
         time.sleep(0.2)

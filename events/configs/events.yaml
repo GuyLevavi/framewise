@@ -1,0 +1,8 @@
+# Composite event rules. A new rule is a new entry here, not new code.
+rules:
+  person-near-vehicle:
+    a: person
+    b: [car, truck, bus]
+    min_overlap: 0.1        # intersection as a share of the smaller box
+    min_duration_s: 0.5     # shorter overlaps are noise
+    max_gap_s: 0.5          # a gap shorter than this does not end the episode
