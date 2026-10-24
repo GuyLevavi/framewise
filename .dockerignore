@@ -1,0 +1,16 @@
+# Keep the build context small and the image free of tests, configs, secrets and models.
+.git
+.venv
+**/__pycache__
+.pytest_cache
+.ruff_cache
+tests
+checks
+eval
+models
+model_repository
+data
+out
+**/configs
+.env
+*.onnx

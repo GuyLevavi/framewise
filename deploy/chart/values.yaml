@@ -1,0 +1,35 @@
+# Defaults. Each environment overrides what differs in its own values file.
+image:
+  repository: quay.example.internal/framewise/framewise
+  tag: latest          # CI replaces this with the commit SHA in values-<env>.yaml
+api:
+  replicas: 1
+  resources: {requests: {cpu: 100m, memory: 256Mi}, limits: {cpu: "1", memory: 1Gi}}
+worker:
+  replicas: 2
+  resources: {requests: {cpu: 500m, memory: 1Gi}, limits: {cpu: "2", memory: 2Gi}}
+databaseSecret: framewise-db          # Secret with key DATABASE_URL, created outside Git
+storage:
+  size: 20Gi
+  storageClassName: ""                # must support ReadWriteMany: API and worker share files
+route:
+  host: ""                            # empty: OpenShift generates one
+config:
+  api:
+    upload_dir: /app/data/uploads
+    max_upload_mb: 200
+    detectors_config: /app/configs/detectors.yaml
+  worker:
+    detectors_config: /app/configs/detectors.yaml
+    poll_interval_s: 1.0
+    stale_after_s: 600
+    max_attempts: 3
+  detectors:
+    sample_fps: 10
+    max_gap_s: 0.5
+    detectors:
+      people-cars-triton:
+        kind: triton
+        url: triton.example.internal:8000
+        model_name: yolo26n
+        keep_labels: [person, car, truck, bus]

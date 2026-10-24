@@ -1,0 +1,3 @@
+upload_dir: /app/data/uploads
+max_upload_mb: 200
+detectors_config: /app/configs/detectors.yaml

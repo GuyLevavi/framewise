@@ -49,6 +49,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PTH", "N"]
 
 [tool.basedpyright]
 include = ["shared", "api", "worker", "migrations", "scripts", "eval", "tests", "checks"]
+exclude = ["deploy"]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
 reportMissingTypeStubs = false

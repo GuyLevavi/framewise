@@ -1,0 +1,5 @@
+# Nonprod overrides. The CI deploy step commits a new image.tag here; Argo CD syncs it.
+image:
+  tag: latest
+worker:
+  replicas: 1

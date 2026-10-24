@@ -1,0 +1,25 @@
+# Named detector setups. A new threshold is a new entry here, never a new class.
+sample_fps: 10       # frames analysed per second of video
+max_gap_s: 0.5       # detections closer than this belong to one segment
+detectors:
+  motion-sensitive:
+    kind: motion
+    threshold: 15
+    min_area: 20
+  motion-coarse:
+    kind: motion
+    threshold: 60
+    min_area: 400
+  people-cars-local:          # YOLO26n in-process on the CPU
+    kind: onnx
+    model_path: /app/models/yolo26n.onnx
+    input_size: [640, 640]
+    score_threshold: 0.3
+    keep_labels: [person, car, truck, bus]
+  people-cars-triton:         # same model and settings, served by Triton
+    kind: triton
+    url: triton.example.internal:8000
+    model_name: yolo26n
+    input_size: [640, 640]
+    score_threshold: 0.3
+    keep_labels: [person, car, truck, bus]

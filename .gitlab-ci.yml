@@ -1,5 +1,6 @@
 # Checks on every merge request; later weeks add evaluate, build and deploy.
-# CI_IMAGE and POSTGRES_IMAGE are project variables pointing at images in Quay.
+# Project variables: CI_IMAGE, POSTGRES_IMAGE, BUILDAH_IMAGE, BASE_IMAGE (images in Quay),
+# QUAY_IMAGE (where Framewise images go), QUAY_ROBOT_USER and QUAY_ROBOT_TOKEN (masked).
 default:
   image: ${CI_IMAGE}
 
@@ -13,7 +14,7 @@ cache:
     files: [uv.lock]
   paths: [.uv-cache]
 
-stages: [lint, typecheck, test, evaluate]
+stages: [lint, typecheck, test, evaluate, build]
 
 before_script:
   - uv sync --frozen
@@ -53,3 +54,15 @@ evaluate:
   script:
     # The team helper library fills eval/data from DagsHub and Label Studio; see eval/test_gate.py.
     - uv run pytest -m eval -s
+
+build:
+  stage: build
+  image: ${BUILDAH_IMAGE}        # Buildah needs no privileged container, unlike Docker-in-Docker
+  needs: [evaluate]              # no image unless the model passed the gate
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  before_script: []
+  script:
+    - buildah login -u "$QUAY_ROBOT_USER" -p "$QUAY_ROBOT_TOKEN" "${QUAY_IMAGE%%/*}"
+    - buildah bud --build-arg BASE_IMAGE="$BASE_IMAGE" -t "$QUAY_IMAGE:$CI_COMMIT_SHORT_SHA" .
+    - buildah push "$QUAY_IMAGE:$CI_COMMIT_SHORT_SHA"

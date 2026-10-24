@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels: {{- include "framewise.labels" . | nindent 4 }}
+data:
+  api.yaml: |
+    {{- toYaml .Values.config.api | nindent 4 }}
+  worker.yaml: |
+    {{- toYaml .Values.config.worker | nindent 4 }}
+  detectors.yaml: |
+    {{- toYaml .Values.config.detectors | nindent 4 }}

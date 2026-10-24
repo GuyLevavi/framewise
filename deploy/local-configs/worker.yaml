@@ -1,0 +1,4 @@
+detectors_config: /app/configs/detectors.yaml
+poll_interval_s: 1.0
+stale_after_s: 600
+max_attempts: 3

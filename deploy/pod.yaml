@@ -1,0 +1,36 @@
+# Run the whole app on the workstation:  podman kube play deploy/pod.yaml
+# Stop it:                                podman kube down deploy/pod.yaml
+# Edit the three image names to your Quay paths and the hostPath folders to your checkout.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: framewise
+spec:
+  containers:
+    - name: postgres
+      image: quay.example.internal/mirror/postgres:16
+      env:
+        - {name: POSTGRES_PASSWORD, value: postgres}   # local only; the cluster uses a Secret
+        - {name: POSTGRES_DB, value: framewise}
+    - name: api
+      image: quay.example.internal/framewise/framewise:latest
+      command: ["sh", "-c", "alembic upgrade head && exec uvicorn api.main:app --host 0.0.0.0 --port 8000"]
+      ports:
+        - {containerPort: 8000, hostPort: 8000}
+      env: &app-env
+        - {name: DATABASE_URL, value: "postgresql+psycopg://postgres:postgres@localhost:5432/framewise"}
+        - {name: FRAMEWISE_API_CONFIG, value: /app/configs/api.yaml}
+        - {name: FRAMEWISE_WORKER_CONFIG, value: /app/configs/worker.yaml}
+      volumeMounts: &app-mounts
+        - {name: configs, mountPath: /app/configs}
+        - {name: uploads, mountPath: /app/data/uploads}
+    - name: worker
+      image: quay.example.internal/framewise/framewise:latest
+      command: ["python", "-m", "worker"]
+      env: *app-env
+      volumeMounts: *app-mounts
+  volumes:
+    - name: configs
+      hostPath: {path: ./deploy/local-configs, type: Directory}
+    - name: uploads
+      hostPath: {path: ./data/uploads, type: DirectoryOrCreate}
