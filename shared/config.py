@@ -9,6 +9,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 from shared.detection import Detector, MotionDetector
+from shared.model_detectors import OnnxDetector, TritonDetector, YoloIO
 from shared.pipeline import DetectorFactory
 
 
@@ -22,7 +23,32 @@ class MotionConfig(_Strict):
     min_area: int = Field(default=50, ge=1)
 
 
-DetectorConfig = Annotated[MotionConfig, Field(discriminator="kind")]
+class _YoloConfig(_Strict):
+    input_size: tuple[int, int] = (640, 640)
+    score_threshold: float = Field(default=0.3, gt=0, lt=1)
+    nms_threshold: float = Field(default=0.45, gt=0, lt=1)
+    keep_labels: list[str] | None = None  # e.g. [person, car]; None keeps all 80 COCO classes
+    max_batch: int = Field(default=8, ge=1)
+
+    def io(self) -> YoloIO:
+        keep = frozenset(self.keep_labels) if self.keep_labels else None
+        return YoloIO(self.input_size, self.score_threshold, self.nms_threshold, keep)
+
+
+class OnnxConfig(_YoloConfig):
+    kind: Literal["onnx"]
+    model_path: Path
+
+
+class TritonConfig(_YoloConfig):
+    kind: Literal["triton"]
+    url: str  # host:port of Triton's HTTP endpoint, no scheme
+    model_name: str = "yolo26n"
+    timeout_s: float = Field(default=30, gt=0)
+    retries: int = Field(default=3, ge=1)
+
+
+DetectorConfig = Annotated[MotionConfig | OnnxConfig | TritonConfig, Field(discriminator="kind")]
 
 
 class DetectorsFile(_Strict):
@@ -40,6 +66,17 @@ def build_detector(config: DetectorConfig) -> Detector:
     match config:
         case MotionConfig():
             return MotionDetector(threshold=config.threshold, min_area=config.min_area)
+        case OnnxConfig():
+            return OnnxDetector(config.model_path, config.io(), config.max_batch)
+        case TritonConfig():
+            return TritonDetector(
+                config.url,
+                config.model_name,
+                config.io(),
+                max_batch=config.max_batch,
+                timeout_s=config.timeout_s,
+                retries=config.retries,
+            )
 
 
 def detector_factory(file: DetectorsFile) -> DetectorFactory:

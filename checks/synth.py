@@ -49,3 +49,17 @@ def write_still(path: Path, frames: int = 20) -> Path:
 def write_corrupt(path: Path) -> Path:
     path.write_bytes(b"this is not a video" * 100)
     return path
+
+
+def write_image_clip(path: Path, image_path: Path, start: int = 10, end: int = 29) -> Path:
+    """A clip that shows `image_path` on frames start..end (inclusive) and black elsewhere."""
+    image = cv2.imread(str(image_path))
+    if image is None:
+        raise FileNotFoundError(image_path)
+    h, w = image.shape[:2]
+    writer = cv2.VideoWriter(str(path), cv2.VideoWriter.fourcc(*"MJPG"), FPS, (w, h))
+    black = np.zeros_like(image)
+    for i in range(FRAMES):
+        writer.write(image if start <= i <= end else black)
+    writer.release()
+    return path

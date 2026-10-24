@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -27,9 +28,12 @@ class Detection:
 
 
 class Detector(Protocol):
-    """Anything that turns one BGR frame into detections."""
+    """Anything that turns BGR frames into detections, one list per frame, in order.
 
-    def detect(self, frame: Frame) -> list[Detection]: ...
+    Batches matter for model servers: one request per frame is the classic slow path.
+    """
+
+    def detect_batch(self, frames: Sequence[Frame]) -> list[list[Detection]]: ...
 
 
 class MotionDetector:
@@ -43,6 +47,9 @@ class MotionDetector:
         self._threshold = threshold
         self._min_area = min_area
         self._previous: Frame | None = None
+
+    def detect_batch(self, frames: Sequence[Frame]) -> list[list[Detection]]:
+        return [self.detect(frame) for frame in frames]  # order matters: each frame vs the previous
 
     def detect(self, frame: Frame) -> list[Detection]:
         gray = np.asarray(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), dtype=np.uint8)

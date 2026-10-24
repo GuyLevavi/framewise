@@ -1,0 +1,29 @@
+# Triton model configuration for YOLO26n (640x640, 80 COCO classes), exported to ONNX with a
+# dynamic batch dimension (see README: Models). Put the model at model_repository/yolo26n/1/model.onnx.
+# Runs on CPU; switch kind to KIND_GPU where a GPU exists.
+name: "yolo26n"
+platform: "onnxruntime_onnx"
+max_batch_size: 8
+input [
+  {
+    name: "images"
+    data_type: TYPE_FP32
+    dims: [ 3, 640, 640 ]
+  }
+]
+output [
+  {
+    name: "output0"
+    data_type: TYPE_FP32
+    dims: [ 84, 8400 ]
+  }
+]
+dynamic_batching {
+  max_queue_delay_microseconds: 2000
+}
+instance_group [
+  {
+    count: 1
+    kind: KIND_CPU
+  }
+]

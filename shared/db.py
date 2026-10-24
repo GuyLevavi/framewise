@@ -15,6 +15,7 @@ from sqlalchemy import (
     String,
     Text,
     create_engine,
+    func,
     select,
     update,
 )
@@ -22,7 +23,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from shared.detection import Box, Detection
-from shared.jobs import FrameDetections, Job, JobStatus, NotFoundError, Video
+from shared.jobs import FrameDetections, Job, JobStatus, LabelSummary, NotFoundError, Video
 
 DATABASE_URL_ENV = "DATABASE_URL"
 
@@ -216,3 +217,20 @@ class PostgresJobRepository:
             )
             frame.detections.append(Detection(r.label, r.score, Box(r.x1, r.y1, r.x2, r.y2)))
         return list(frames.values())
+
+    def summarize_video(self, video_id: str) -> list[LabelSummary]:
+        query = (
+            select(
+                DetectionRow.label,
+                func.count(),
+                func.min(DetectionRow.frame_time),
+                func.max(DetectionRow.frame_time),
+            )
+            .where(DetectionRow.video_id == video_id)
+            .group_by(DetectionRow.label)
+            .order_by(DetectionRow.label)
+        )
+        with self._session() as s:
+            return [
+                LabelSummary(label, n, first, last) for label, n, first, last in s.execute(query)
+            ]

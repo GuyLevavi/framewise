@@ -10,3 +10,16 @@ detectors:
     kind: motion
     threshold: 60
     min_area: 400
+  people-cars-local:          # YOLO26n in-process on the CPU
+    kind: onnx
+    model_path: models/yolo26n.onnx
+    input_size: [640, 640]
+    score_threshold: 0.3
+    keep_labels: [person, car, truck, bus]
+  people-cars-triton:         # same model and settings, served by Triton
+    kind: triton
+    url: localhost:8000
+    model_name: yolo26n
+    input_size: [640, 640]
+    score_threshold: 0.3
+    keep_labels: [person, car, truck, bus]

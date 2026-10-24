@@ -56,6 +56,14 @@ class FrameDetections:
     detections: list[Detection]
 
 
+@dataclass(frozen=True)
+class LabelSummary:
+    label: str
+    detections: int
+    first_seen_s: float
+    last_seen_s: float
+
+
 class NotFoundError(KeyError):
     pass
 
@@ -76,6 +84,9 @@ class JobRepository(Protocol):
 
     def save_detections(self, job_id: str, frames: list[FrameDetections]) -> None: ...
     def list_detections(self, job_id: str) -> list[FrameDetections]: ...
+    def summarize_video(self, video_id: str) -> list[LabelSummary]:
+        """Per label: how many detections, first and last time seen, over the video's jobs."""
+        ...
 
 
 class InMemoryJobRepository:
@@ -138,3 +149,16 @@ class InMemoryJobRepository:
 
     def list_detections(self, job_id: str) -> list[FrameDetections]:
         return sorted(self._detections.get(job_id, []), key=lambda f: f.frame_index)
+
+    def summarize_video(self, video_id: str) -> list[LabelSummary]:
+        seen: dict[str, list[float]] = {}
+        for job_id, frames in self._detections.items():
+            if self._jobs[job_id].video_id != video_id:
+                continue
+            for frame in frames:
+                for d in frame.detections:
+                    seen.setdefault(d.label, []).append(frame.time_s)
+        return [
+            LabelSummary(label, len(times), min(times), max(times))
+            for label, times in sorted(seen.items())
+        ]

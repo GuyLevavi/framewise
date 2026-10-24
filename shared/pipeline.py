@@ -78,13 +78,13 @@ class PipelineRunner:
         self._repository.set_status(job.id, JobStatus.RUNNING)
         try:
             detector = self._detectors(job.detector)
-            batch: list[FrameDetections] = []
-            for index, time_s, frame in self._sources(job).frames():
-                batch.append(FrameDetections(index, time_s, detector.detect(frame)))
+            batch: list[tuple[int, float, Frame]] = []
+            for item in self._sources(job).frames():
+                batch.append(item)
                 if len(batch) >= self._batch_frames:
-                    self._repository.save_detections(job.id, batch)
+                    self._process(job.id, detector, batch)
                     batch = []
-            self._repository.save_detections(job.id, batch)
+            self._process(job.id, detector, batch)
         except Exception as exc:
             log.exception("job failed", extra={"job_id": job.id})
             self._repository.set_status(
@@ -92,3 +92,12 @@ class PipelineRunner:
             )
             return
         self._repository.set_status(job.id, JobStatus.DONE)
+
+    def _process(
+        self, job_id: str, detector: Detector, batch: list[tuple[int, float, Frame]]
+    ) -> None:
+        if not batch:
+            return
+        results = detector.detect_batch([frame for _, _, frame in batch])
+        frames = [FrameDetections(i, t, d) for (i, t, _), d in zip(batch, results, strict=True)]
+        self._repository.save_detections(job_id, frames)

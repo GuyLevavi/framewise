@@ -42,6 +42,13 @@ class JobOut(BaseModel):
     segments: list[SegmentOut] = []
 
 
+class LabelSummaryOut(BaseModel):
+    label: str
+    detections: int
+    first_seen_s: float
+    last_seen_s: float
+
+
 class Services:
     """Everything the endpoints need, built once at startup."""
 
@@ -107,6 +114,22 @@ def create_app(
         job = Job(video_id=video.id, video_path=video.path, detector=body.detector)
         services.repository.add(job)  # a worker picks it up; the API never runs long work
         return JobOut(id=job.id, status=job.status)
+
+    @app.get("/videos/{video_id}/summary")
+    def video_summary(video_id: str, services: ServicesDep) -> list[LabelSummaryOut]:
+        try:
+            services.repository.get_video(video_id)
+        except NotFoundError:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown video {video_id}") from None
+        return [
+            LabelSummaryOut(
+                label=s.label,
+                detections=s.detections,
+                first_seen_s=s.first_seen_s,
+                last_seen_s=s.last_seen_s,
+            )
+            for s in services.repository.summarize_video(video_id)
+        ]
 
     @app.get("/jobs/{job_id}")
     def get_job(job_id: str, services: ServicesDep) -> JobOut:

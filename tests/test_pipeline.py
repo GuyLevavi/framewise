@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -18,10 +18,8 @@ from shared.video import Frame
 class FakeDetector:
     """Reports one box on every frame whose mean brightness is above 0."""
 
-    def detect(self, frame: Frame) -> list[Detection]:
-        if frame.mean() > 0:
-            return [Detection("thing", 0.9, Box(0, 0, 1, 1))]
-        return []
+    def detect_batch(self, frames: Sequence[Frame]) -> list[list[Detection]]:
+        return [[Detection("thing", 0.9, Box(0, 0, 1, 1))] if f.mean() > 0 else [] for f in frames]
 
 
 class ListSource:

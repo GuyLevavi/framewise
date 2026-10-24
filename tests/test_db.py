@@ -126,3 +126,15 @@ def test_json_log_line_carries_job_id() -> None:
     record.job_id = "abc123"
     line = json.loads(JsonFormatter().format(record))
     assert line["job_id"] == "abc123" and line["event"] == "job done" and line["level"] == "INFO"
+
+
+def test_summary_counts_labels_with_first_and_last_seen(repo: PostgresJobRepository) -> None:
+    [job] = add_jobs(repo, 1)
+    person, car = Detection("person", 0.9, Box(0, 0, 1, 1)), Detection("car", 0.8, Box(0, 0, 2, 2))
+    repo.save_detections(
+        job.id,
+        [FrameDetections(1, 0.1, [person]), FrameDetections(5, 0.5, [person, car])],
+    )
+    summary = {s.label: s for s in repo.summarize_video(job.video_id)}
+    assert (summary["person"].detections, summary["person"].first_seen_s) == (2, 0.1)
+    assert (summary["car"].detections, summary["car"].last_seen_s) == (1, 0.5)
