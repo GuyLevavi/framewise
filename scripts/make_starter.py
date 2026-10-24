@@ -33,6 +33,7 @@ KEEP = (
     "eval/eval.yaml",
     "eval/data/.gitignore",
     "model_repository/",
+    "scripts/make_demo_eval_data.py",
     ".gitlab/",
 )
 # Empty packages, so the project installs and imports resolve from day one.

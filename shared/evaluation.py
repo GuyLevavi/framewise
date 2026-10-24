@@ -78,7 +78,10 @@ class LocalLabelSource:
     def _exports(self) -> list[Path]:
         exports = sorted(self._folder.glob("*.json"))
         if not exports:
-            raise FileNotFoundError(f"no Label Studio exports (*.json) in {self._folder}")
+            raise FileNotFoundError(
+                f"no Label Studio exports (*.json) in {self._folder}; fetch the labeled clips, "
+                "or run `python scripts/make_demo_eval_data.py` for a local demo clip"
+            )
         return exports
 
     def clips(self) -> Iterator[LabeledClip]:

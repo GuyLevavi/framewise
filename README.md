@@ -38,6 +38,12 @@ Ultralytics 8.4.188: the `.pt` has SHA-256
 `9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef`. Tests that need the model are
 skipped, with a reason, when it is missing.
 
+## Evaluation gate
+
+`uv run pytest -m eval` scores the detector on the labeled clips in `eval/data` (see
+`eval/eval.yaml`). In CI the team helper library fills that folder from DagsHub and Label Studio.
+To try the gate locally, first write one demo clip: `uv run python scripts/make_demo_eval_data.py`.
+
 ## Database
 
 Tests create and drop their own database on the server named by `FRAMEWISE_TEST_DATABASE_URL`
