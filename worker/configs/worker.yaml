@@ -1,0 +1,5 @@
+# Worker settings. DATABASE_URL comes from the environment (a Secret in the cluster).
+detectors_config: worker/configs/detectors.yaml
+poll_interval_s: 1.0     # how long to sleep when no job is waiting
+stale_after_s: 600       # a RUNNING job older than this is assumed to belong to a dead worker
+max_attempts: 3          # after this many tries a job is marked FAILED

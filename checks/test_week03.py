@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 
 from checks import synth
-from checks.conftest import poll_job
+from checks.fixtures import poll_job
 
 
 def upload(url: str, video: Path) -> str:

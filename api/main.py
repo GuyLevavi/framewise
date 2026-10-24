@@ -9,13 +9,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, UploadFile, status
+from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel
 
 from api.settings import ApiSettings, load_settings
-from shared.config import DetectorsFile, detector_factory, load_yaml
-from shared.jobs import InMemoryJobRepository, Job, JobNotFoundError, JobRepository, JobStatus
-from shared.pipeline import PipelineRunner, VideoFileSource, group_segments
+from shared.config import DetectorsFile, load_yaml
+from shared.db import PostgresJobRepository, make_engine
+from shared.jobs import Job, JobRepository, JobStatus, NotFoundError, Video
+from shared.pipeline import group_segments
 
 
 class VideoOut(BaseModel):
@@ -48,18 +49,7 @@ class Services:
         self.settings = settings
         self.detectors = load_yaml(settings.detectors_config, DetectorsFile)
         self.repository = repository
-        self.runner = PipelineRunner(
-            sources=lambda job: VideoFileSource(Path(job.video_path), self.detectors.sample_fps),
-            detectors=detector_factory(self.detectors),
-            repository=repository,
-        )
         settings.upload_dir.mkdir(parents=True, exist_ok=True)
-
-    def video_path(self, video_id: str) -> Path:
-        matches = list(self.settings.upload_dir.glob(f"{video_id}.*"))
-        if not matches:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown video {video_id}")
-        return matches[0]
 
 
 def get_services(request: Request) -> Services:
@@ -76,7 +66,7 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.services = Services(
-            settings or load_settings(), repository or InMemoryJobRepository()
+            settings or load_settings(), repository or PostgresJobRepository(make_engine())
         )
         yield
 
@@ -93,28 +83,36 @@ def create_app(
         target = services.settings.upload_dir / f"{video_id}{suffix}"
         with target.open("wb") as out:
             shutil.copyfileobj(file.file, out)  # streams to disk; never the whole file in memory
-        return VideoOut(
-            video_id=video_id, filename=file.filename or "", size_bytes=target.stat().st_size
+        video = Video(
+            id=video_id,
+            filename=file.filename or "",
+            path=str(target.resolve()),
+            size_bytes=target.stat().st_size,
         )
+        services.repository.add_video(video)
+        return VideoOut(video_id=video.id, filename=video.filename, size_bytes=video.size_bytes)
 
     @app.post("/jobs", status_code=status.HTTP_202_ACCEPTED)
-    def submit_job(body: JobIn, services: ServicesDep, background: BackgroundTasks) -> JobOut:
+    def submit_job(body: JobIn, services: ServicesDep) -> JobOut:
         if body.detector not in services.detectors.detectors:
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY, f"unknown detector {body.detector}"
             )
-        job = Job(video_path=str(services.video_path(body.video_id)), detector=body.detector)
-        services.repository.add(job)
-        background.add_task(
-            services.runner.run, job
-        )  # naive on purpose: week 4 moves this to a worker
+        try:
+            video = services.repository.get_video(body.video_id)
+        except NotFoundError:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, f"unknown video {body.video_id}"
+            ) from None
+        job = Job(video_id=video.id, video_path=video.path, detector=body.detector)
+        services.repository.add(job)  # a worker picks it up; the API never runs long work
         return JobOut(id=job.id, status=job.status)
 
     @app.get("/jobs/{job_id}")
     def get_job(job_id: str, services: ServicesDep) -> JobOut:
         try:
             job = services.repository.get(job_id)
-        except JobNotFoundError:
+        except NotFoundError:
             raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown job {job_id}") from None
         segments: list[SegmentOut] = []
         if job.status is JobStatus.DONE:

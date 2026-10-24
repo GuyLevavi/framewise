@@ -50,18 +50,17 @@ def make_runner(
 def test_runner_stores_detections_for_every_frame_and_finishes() -> None:
     frames = [np.full((4, 4, 3), v, dtype=np.uint8) for v in (0, 9, 0, 9, 9)]
     runner, repo = make_runner(ListSource(frames), FakeDetector())
-    job = Job(video_path="unused", detector="fake")
+    job = Job(video_id="v", video_path="unused", detector="fake")
     repo.add(job)
     runner.run(job)
     assert repo.get(job.id).status is JobStatus.DONE
     stored = repo.list_detections(job.id)
-    assert [f.frame_index for f in stored] == [0, 1, 2, 3, 4]
-    assert [len(f.detections) for f in stored] == [0, 1, 0, 1, 1]
+    assert [f.frame_index for f in stored] == [1, 3, 4]  # frames without detections are not stored
 
 
 def test_runner_marks_job_failed_with_reason() -> None:
     runner, repo = make_runner(ExplodingSource(), FakeDetector())
-    job = Job(video_path="unused", detector="fake")
+    job = Job(video_id="v", video_path="unused", detector="fake")
     repo.add(job)
     runner.run(job)
     failed = repo.get(job.id)

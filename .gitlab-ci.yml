@@ -1,10 +1,12 @@
-# Fast checks on every merge request; later weeks add database, evaluate, build and deploy.
-# CI_IMAGE is a project variable pointing at the internal CI image (Python + uv preinstalled).
+# Checks on every merge request; later weeks add evaluate, build and deploy.
+# CI_IMAGE and POSTGRES_IMAGE are project variables pointing at images in Quay.
 default:
   image: ${CI_IMAGE}
 
 variables:
   UV_CACHE_DIR: .uv-cache
+  POSTGRES_PASSWORD: postgres            # throwaway database that lives only for the job
+  FRAMEWISE_TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/postgres
 
 cache:
   key:
@@ -29,8 +31,13 @@ typecheck:
 
 test:
   stage: test
+  services:
+    - name: ${POSTGRES_IMAGE}
+      alias: postgres
   script:
-    - uv run pytest --cov=shared --cov=api --cov-report=term --junitxml=report.xml
+    - DATABASE_URL=${FRAMEWISE_TEST_DATABASE_URL} uv run alembic upgrade head
+    - DATABASE_URL=${FRAMEWISE_TEST_DATABASE_URL} uv run alembic check   # models and migrations agree
+    - uv run pytest --cov=shared --cov=api --cov=worker --cov-report=term --junitxml=report.xml
   artifacts:
     when: always
     reports:

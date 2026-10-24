@@ -38,7 +38,7 @@ def _cmd_analyze(args: argparse.Namespace) -> int:
         detectors=detector_factory(config),
         repository=repository,
     )
-    job = Job(video_path=str(args.video), detector=args.detector)
+    job = Job(video_id="cli", video_path=str(args.video), detector=args.detector)
     repository.add(job)
     runner.run(job)
     finished = repository.get(job.id)
@@ -48,6 +48,13 @@ def _cmd_analyze(args: argparse.Namespace) -> int:
     times = [f.time_s for f in repository.list_detections(job.id) if f.detections]
     segments = group_segments(times, config.max_gap_s)
     print(json.dumps({"segments": [vars(s) for s in segments]}, indent=2))
+    return 0
+
+
+def _cmd_worker(_args: argparse.Namespace) -> int:
+    from worker.main import main as worker_main  # imported lazily: needs the database packages
+
+    worker_main()
     return 0
 
 
@@ -67,6 +74,9 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--detector", default="motion-sensitive")
     a.add_argument("--config", type=Path, default=Path("worker/configs/detectors.yaml"))
     a.set_defaults(func=_cmd_analyze)
+
+    w = commands.add_parser("worker", help="run the job worker (needs DATABASE_URL)")
+    w.set_defaults(func=_cmd_worker)
     return parser
 
 
