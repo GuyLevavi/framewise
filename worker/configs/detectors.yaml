@@ -1,0 +1,12 @@
+# Named detector setups. A new threshold is a new entry here, never a new class.
+sample_fps: 10       # frames analysed per second of video
+max_gap_s: 0.5       # detections closer than this belong to one segment
+detectors:
+  motion-sensitive:
+    kind: motion
+    threshold: 15
+    min_area: 20
+  motion-coarse:
+    kind: motion
+    threshold: 60
+    min_area: 400
