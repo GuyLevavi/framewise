@@ -1,0 +1,6 @@
+# Copy to uv.toml on the air-gapped workstation and set your Artifactory PyPI URL.
+# Kept as an example here so the reference repo also installs on a connected machine.
+[[index]]
+name = "artifactory"
+url = "https://artifactory.example.internal/artifactory/api/pypi/pypi-remote/simple"
+default = true
