@@ -69,8 +69,11 @@ def test_minimum_duration_drops_short_episodes(engine: Engine) -> None:
 
 
 def test_overlap_threshold_is_relative_to_the_smaller_box(engine: Engine) -> None:
+    # The overlap is 50 px: half the person box (100 px), a quarter of the car box (200 px).
     job = done_job(engine, scene())
     assert spans(engine, job, Rule(a="person", b=["car"], min_overlap=0.6)) == []  # only 50%
+    found = spans(engine, job, Rule(a="person", b=["car"], min_overlap=0.4, max_gap_s=0.15))
+    assert found == [(0.0, 0.4, 5), (1.0, 1.2, 3)], "0.4 passes for the smaller box, not the larger"
 
 
 def test_keys_are_stable_across_reruns(engine: Engine) -> None:
